@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">IncognitoTab</string>
+
+    <string name="xposeddescription"></string>
 </resources>
