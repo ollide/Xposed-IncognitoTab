@@ -21,6 +21,8 @@ public class OpenIncognitoActivity extends Activity {
             Intent incognitoIntent = new Intent(Intent.ACTION_VIEW);
             incognitoIntent.addCategory(Intent.CATEGORY_BROWSABLE);
             incognitoIntent.setData(Uri.parse(CHROME_EMPTY_TAB));
+            // custom extra which contains the incognito URL
+            incognitoIntent.putExtra(MethodHooks.EXTRA_INCOGNITO_URL, in.getDataString());
 
             try {
                 startActivity(incognitoIntent);
