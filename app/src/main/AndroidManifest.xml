@@ -7,6 +7,18 @@
         android:label="@string/app_name"
         android:theme="@style/AppTheme">
 
+        <activity android:name=".OpenIncognitoActivity">
+            <intent-filter android:label="@string/intent_filter_label">
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="http" />
+                <data android:scheme="https" />
+            </intent-filter>
+        </activity>
+
         <meta-data
             android:name="xposedmodule"
             android:value="true" />
