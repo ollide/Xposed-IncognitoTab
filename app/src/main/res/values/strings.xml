@@ -4,5 +4,5 @@
     <string name="intent_filter_label">Incognito Tab</string>
     <string name="chrome_not_found">Sorry, Chrome wasn\'t found.</string>
 
-    <string name="xposeddescription"></string>
+    <string name="xposeddescription">Open links incognito in Chrome.</string>
 </resources>
