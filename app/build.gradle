@@ -11,8 +11,14 @@ android {
         versionCode 1
         versionName "1.0"
     }
+    signingConfigs {
+        release {
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
@@ -21,4 +27,17 @@ android {
 
 dependencies {
     provided files('libs/XposedBridgeApi-54.jar')
+}
+
+if (project.hasProperty('storeFile') &&
+        project.hasProperty('keyAlias') &&
+        project.hasProperty('storePassword') &&
+        project.hasProperty('keyPassword')) {
+    android.signingConfigs.release.storeFile = file(storeFile)
+    android.signingConfigs.release.keyAlias = keyAlias
+    android.signingConfigs.release.storePassword = storePassword
+    android.signingConfigs.release.keyPassword = keyPassword
+} else {
+    // configuration missing, drop signingConfig
+    android.buildTypes.release.signingConfig = null
 }
