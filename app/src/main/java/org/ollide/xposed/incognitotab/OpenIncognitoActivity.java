@@ -3,13 +3,14 @@ package org.ollide.xposed.incognitotab;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.widget.Toast;
 
 public class OpenIncognitoActivity extends Activity {
 
-    private static final String CHROME_EMPTY_TAB = "googlechrome://navigate?url=chrome-native://newtab/";
+    private static final String CHROME_EMPTY_TAB = "about://newtab";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -23,6 +24,14 @@ public class OpenIncognitoActivity extends Activity {
             incognitoIntent.setData(Uri.parse(CHROME_EMPTY_TAB));
             // custom extra which contains the incognito URL
             incognitoIntent.putExtra(MethodHooks.EXTRA_INCOGNITO_URL, in.getDataString());
+
+            // try Chrome Beta first
+            incognitoIntent.setPackage(PackageName.CHROME_BETA);
+            PackageManager pm = getPackageManager();
+            if (pm.queryIntentActivities(incognitoIntent, 0).isEmpty()) {
+                // Chrome Beta is not installed
+                incognitoIntent.setPackage(PackageName.CHROME);
+            }
 
             try {
                 startActivity(incognitoIntent);
