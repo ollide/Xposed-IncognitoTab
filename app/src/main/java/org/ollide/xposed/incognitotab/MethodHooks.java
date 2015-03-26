@@ -16,20 +16,21 @@ public class MethodHooks implements IXposedHookLoadPackage {
 
     public static final String EXTRA_INCOGNITO_URL = "EXTRA_INCOGNITO_URL";
 
-    private static final String TARGET_PACKAGE = "com.android.chrome";
+    private static final String PACKAGE_CHROME = "com.android.chrome";
+    private static final String PACKAGE_CHROME_BETA = "com.chrome.beta";
 
     private static String url = null;
     private static boolean didOpen = false;
 
     @Override
-    public void handleLoadPackage(final XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
-        if (!loadPackageParam.packageName.equals(TARGET_PACKAGE)) {
-            return;
+    public void handleLoadPackage(final XC_LoadPackage.LoadPackageParam lpp) throws Throwable {
+        if (lpp.packageName.equals(PACKAGE_CHROME) || lpp.packageName.equals(PACKAGE_CHROME_BETA)) {
+            hookChromeMethods(lpp.classLoader);
         }
+    }
 
-        // we are in com.android.chrome - hook methods!
-
-        XposedHelpers.findAndHookMethod("com.google.android.apps.chrome.document.ChromeLauncherActivity", loadPackageParam.classLoader, "onCreate", Bundle.class, new XC_MethodHook() {
+    private void hookChromeMethods(final ClassLoader classLoader) {
+        XposedHelpers.findAndHookMethod("com.google.android.apps.chrome.document.ChromeLauncherActivity", classLoader, "onCreate", Bundle.class, new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                 super.afterHookedMethod(param);
@@ -43,18 +44,18 @@ public class MethodHooks implements IXposedHookLoadPackage {
             }
         });
 
-        final Class<?> chromeTabClass = XposedHelpers.findClass("com.google.android.apps.chrome.tab.ChromeTab", loadPackageParam.classLoader);
-        final Class<?> chromeActivityClass = XposedHelpers.findClass("com.google.android.apps.chrome.ChromeActivity", loadPackageParam.classLoader);
+        final Class<?> chromeTabClass = XposedHelpers.findClass("com.google.android.apps.chrome.tab.ChromeTab", classLoader);
+        final Class<?> chromeActivityClass = XposedHelpers.findClass("com.google.android.apps.chrome.ChromeActivity", classLoader);
 
         // class to create new tabs
-        final Class<?> chromeTabCreatorClass = XposedHelpers.findClass("com.google.android.apps.chrome.tabmodel.ChromeTabCreator", loadPackageParam.classLoader);
+        final Class<?> chromeTabCreatorClass = XposedHelpers.findClass("com.google.android.apps.chrome.tabmodel.ChromeTabCreator", classLoader);
 
         // parameter of ChromeTabCreator#createNewTab
-        final Class<?> loadUrlParamsClass = XposedHelpers.findClass("org.chromium.content_public.browser.LoadUrlParams", loadPackageParam.classLoader);
-        final Class<?> tabLaunchTypeClass = XposedHelpers.findClass("org.chromium.chrome.browser.tabmodel.TabModel.TabLaunchType", loadPackageParam.classLoader);
-        final Class<?> tabClass = XposedHelpers.findClass("org.chromium.chrome.browser.Tab", loadPackageParam.classLoader);
+        final Class<?> loadUrlParamsClass = XposedHelpers.findClass("org.chromium.content_public.browser.LoadUrlParams", classLoader);
+        final Class<?> tabLaunchTypeClass = XposedHelpers.findClass("org.chromium.chrome.browser.tabmodel.TabModel.TabLaunchType", classLoader);
+        final Class<?> tabClass = XposedHelpers.findClass("org.chromium.chrome.browser.Tab", classLoader);
 
-        XposedHelpers.findAndHookMethod("com.google.android.apps.chrome.tab.ChromeTab", loadPackageParam.classLoader, "didStartPageLoad", String.class, boolean.class, new XC_MethodHook() {
+        XposedHelpers.findAndHookMethod("com.google.android.apps.chrome.tab.ChromeTab", classLoader, "didStartPageLoad", String.class, boolean.class, new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                 super.beforeHookedMethod(param);
