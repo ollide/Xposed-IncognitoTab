@@ -16,15 +16,12 @@ public class MethodHooks implements IXposedHookLoadPackage {
 
     public static final String EXTRA_INCOGNITO_URL = "EXTRA_INCOGNITO_URL";
 
-    private static final String PACKAGE_CHROME = "com.android.chrome";
-    private static final String PACKAGE_CHROME_BETA = "com.chrome.beta";
-
     private static String url = null;
     private static boolean didOpen = false;
 
     @Override
     public void handleLoadPackage(final XC_LoadPackage.LoadPackageParam lpp) throws Throwable {
-        if (lpp.packageName.equals(PACKAGE_CHROME) || lpp.packageName.equals(PACKAGE_CHROME_BETA)) {
+        if (lpp.packageName.equals(PackageName.CHROME) || lpp.packageName.equals(PackageName.CHROME_BETA)) {
             hookChromeMethods(lpp.classLoader);
         }
     }
