@@ -22,11 +22,17 @@ public class MethodHooks implements IXposedHookLoadPackage {
     @Override
     public void handleLoadPackage(final XC_LoadPackage.LoadPackageParam lpp) throws Throwable {
         if (lpp.packageName.equals(PackageName.CHROME) || lpp.packageName.equals(PackageName.CHROME_BETA)) {
-            hookChromeMethods(lpp.classLoader);
+            hookChromeMethods(lpp);
         }
     }
 
-    private void hookChromeMethods(final ClassLoader classLoader) {
+    private void hookChromeMethods(XC_LoadPackage.LoadPackageParam lpp) {
+        final String packageName = lpp.packageName;
+        final ClassLoader classLoader = lpp.classLoader;
+
+        final Class<?> chromeLauncherActivity = XposedHelpers.findClass("com.google.android.apps.chrome.document.ChromeLauncherActivity", classLoader);
+        final Class<?> pendingDocumentData = XposedHelpers.findClass("org.chromium.chrome.browser.document.PendingDocumentData", classLoader);
+
         XposedHelpers.findAndHookMethod("com.google.android.apps.chrome.document.ChromeLauncherActivity", classLoader, "onCreate", Bundle.class, new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
@@ -34,9 +40,15 @@ public class MethodHooks implements IXposedHookLoadPackage {
 
                 Activity chromeActivity = (Activity) param.thisObject;
                 String incognitoUrl = chromeActivity.getIntent().getStringExtra(EXTRA_INCOGNITO_URL);
+
                 if (incognitoUrl != null) {
-                    didOpen = false;
-                    url = incognitoUrl;
+                    if (ChromeUtils.isDocumentMode(classLoader, packageName, chromeActivity)) {
+                        Method m = chromeLauncherActivity.getMethod("launchInstance", Activity.class, boolean.class, int.class, String.class, int.class, int.class, boolean.class, pendingDocumentData);
+                        m.invoke(null, chromeActivity, true, 0, incognitoUrl, 201, 6, false, null);
+                    } else {
+                        didOpen = false;
+                        url = incognitoUrl;
+                    }
                 }
             }
         });
