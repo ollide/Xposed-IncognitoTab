@@ -4,8 +4,6 @@ import android.app.Activity;
 import android.os.Bundle;
 
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
@@ -31,7 +29,6 @@ public class MethodHooks implements IXposedHookLoadPackage {
         final ClassLoader classLoader = lpp.classLoader;
 
         final Class<?> chromeLauncherActivity = XposedHelpers.findClass("com.google.android.apps.chrome.document.ChromeLauncherActivity", classLoader);
-        final Class<?> pendingDocumentData = XposedHelpers.findClass("org.chromium.chrome.browser.document.PendingDocumentData", classLoader);
 
         XposedHelpers.findAndHookMethod("com.google.android.apps.chrome.document.ChromeLauncherActivity", classLoader, "onCreate", Bundle.class, new XC_MethodHook() {
             @Override
@@ -43,8 +40,7 @@ public class MethodHooks implements IXposedHookLoadPackage {
 
                 if (incognitoUrl != null) {
                     if (ChromeUtils.isDocumentMode(classLoader, packageName, chromeActivity)) {
-                        Method m = chromeLauncherActivity.getMethod("launchInstance", Activity.class, boolean.class, int.class, String.class, int.class, int.class, boolean.class, pendingDocumentData);
-                        m.invoke(null, chromeActivity, true, 0, incognitoUrl, 201, 6, false, null);
+                        XposedHelpers.callStaticMethod(chromeLauncherActivity, "launchInstance", chromeActivity, true, 0, incognitoUrl, 201, 6, false, null);
                     } else {
                         didOpen = false;
                         url = incognitoUrl;
@@ -53,16 +49,9 @@ public class MethodHooks implements IXposedHookLoadPackage {
             }
         });
 
-        final Class<?> chromeTabClass = XposedHelpers.findClass("com.google.android.apps.chrome.tab.ChromeTab", classLoader);
-        final Class<?> chromeActivityClass = XposedHelpers.findClass("com.google.android.apps.chrome.ChromeActivity", classLoader);
-
-        // class to create new tabs
-        final Class<?> chromeTabCreatorClass = XposedHelpers.findClass("com.google.android.apps.chrome.tabmodel.ChromeTabCreator", classLoader);
-
         // parameter of ChromeTabCreator#createNewTab
         final Class<?> loadUrlParamsClass = XposedHelpers.findClass("org.chromium.content_public.browser.LoadUrlParams", classLoader);
         final Class<?> tabLaunchTypeClass = XposedHelpers.findClass("org.chromium.chrome.browser.tabmodel.TabModel.TabLaunchType", classLoader);
-        final Class<?> tabClass = XposedHelpers.findClass("org.chromium.chrome.browser.Tab", classLoader);
 
         XposedHelpers.findAndHookMethod("com.google.android.apps.chrome.tab.ChromeTab", classLoader, "didStartPageLoad", String.class, boolean.class, new XC_MethodHook() {
             @Override
@@ -72,30 +61,24 @@ public class MethodHooks implements IXposedHookLoadPackage {
                 if (!didOpen && url != null) {
                     didOpen = true;
 
-                    // this = empty regular tab (chrome-native://newtab/)
+                    // this = empty regular tab
                     Object chromeTab = param.thisObject;
 
                     // access ChromeTab's activity
-                    Field chromeActivityField = chromeTabClass.getDeclaredField("mActivity");
-                    chromeActivityField.setAccessible(true);
-                    Object chromeActivity = chromeActivityField.get(chromeTab);
+                    Object chromeActivity = XposedHelpers.getObjectField(chromeTab, "mActivity");
 
-                    // access Activity's incognito TabCreator
-                    Method getTabCreator = chromeActivityClass.getMethod("getTabCreator", boolean.class);
-                    Object tabCreator = getTabCreator.invoke(chromeActivity, true);
-
-                    // retrieve TabCreator's method createNewTab
-                    Method createNewTab = chromeTabCreatorClass.getMethod("createNewTab", loadUrlParamsClass, tabLaunchTypeClass, tabClass);
+                    // access Activity's incognito TabCreator (true -> incognito, false -> regular)
+                    Object tabCreator = XposedHelpers.callMethod(chromeActivity, "getTabCreator", true);
 
                     // create a LoadUrlParams object with the requested incognito URL
                     Constructor<?> constructor = loadUrlParamsClass.getConstructor(String.class);
                     Object loadUrlParams = constructor.newInstance(url);
 
-                    // specify required enum (TabModel.TabLaunchType.FROM_LINK)
+                    // specify required enum (TabModel.TabLaunchType.FROM_MENU_OR_OVERVIEW)
                     Enum tabLaunchType = Enum.valueOf((Class<? extends Enum>) tabLaunchTypeClass, "FROM_MENU_OR_OVERVIEW");
 
                     // invoke createNewTab to open the url in an incognito tab :)
-                    createNewTab.invoke(tabCreator, loadUrlParams, tabLaunchType, chromeTab);
+                    XposedHelpers.callMethod(tabCreator, "createNewTab", loadUrlParams, tabLaunchType, chromeTab);
                 }
             }
         });
